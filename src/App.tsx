@@ -117,7 +117,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t border-slate-200 mt-6 py-4 text-center text-xs text-slate-400">
-        Developed by DongTrieu
+        Developed by DongTrieu · v1.0.0
       </footer>
     </div>
   )
