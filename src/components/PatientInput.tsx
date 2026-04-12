@@ -2,9 +2,10 @@ interface PatientInputProps {
   weight: string
   onChange: (value: string) => void
   onCalculate: () => void
+  isExtremeWeight?: boolean
 }
 
-export default function PatientInput({ weight, onChange, onCalculate }: PatientInputProps) {
+export default function PatientInput({ weight, onChange, onCalculate, isExtremeWeight }: PatientInputProps) {
   const isValid = weight !== '' && !isNaN(parseFloat(weight)) && parseFloat(weight) > 0
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -37,6 +38,7 @@ export default function PatientInput({ weight, onChange, onCalculate }: PatientI
           </div>
         </div>
         <button
+          type="button"
           onClick={onCalculate}
           disabled={!isValid}
           className="self-end sm:self-auto px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
@@ -44,6 +46,12 @@ export default function PatientInput({ weight, onChange, onCalculate }: PatientI
           Calculate Initial Dose
         </button>
       </div>
+      {isExtremeWeight && (
+        <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg px-4 py-2.5 text-xs text-amber-800 font-medium">
+          ⚠ Weight exceeds 200 kg. Please double-check the entered weight — doses may be unusually high.
+        </div>
+      )}
     </section>
   )
 }
+

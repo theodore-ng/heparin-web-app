@@ -11,29 +11,35 @@ import {
   type AdjustmentResult,
 } from './logic/heparin'
 
+const WEIGHT_WARN_THRESHOLD = 200
+
 export default function App() {
   const [weight, setWeight] = useState('')
   const [initialDose, setInitialDose] = useState<InitialDose | null>(null)
   const [aptt, setAptt] = useState('')
   const [adjustment, setAdjustment] = useState<AdjustmentResult | null>(null)
   const [currentRateStr, setCurrentRateStr] = useState('')
+  const [prevRateIuPerHr, setPrevRateIuPerHr] = useState(0)
+
+  const weightKg = parseFloat(weight)
+  const isExtremeWeight = !isNaN(weightKg) && weightKg > WEIGHT_WARN_THRESHOLD
 
   const handleCalculateInitial = () => {
-    const kg = parseFloat(weight)
-    if (isNaN(kg) || kg <= 0) return
-    const dose = calcInitialDose(kg)
+    if (isNaN(weightKg) || weightKg <= 0) return
+    const dose = calcInitialDose(weightKg)
     setInitialDose(dose)
     setAptt('')
     setAdjustment(null)
     setCurrentRateStr(String(dose.infusion.mLPerHr))
+    setPrevRateIuPerHr(dose.infusion.iuPerHr)
   }
 
   const handleAdjust = () => {
     const apttVal = parseFloat(aptt)
-    const kg = parseFloat(weight)
     const rateIuPerHr = parseFloat(currentRateStr) * 250
-    if (isNaN(apttVal) || isNaN(kg) || apttVal <= 0 || isNaN(rateIuPerHr) || initialDose === null) return
-    const result = calcAPTTAdjustment(apttVal, kg, rateIuPerHr)
+    if (isNaN(apttVal) || isNaN(weightKg) || apttVal <= 0 || isNaN(rateIuPerHr) || initialDose === null) return
+    setPrevRateIuPerHr(rateIuPerHr)
+    const result = calcAPTTAdjustment(apttVal, weightKg, rateIuPerHr)
     setAdjustment(result)
     if (!result.noChange) {
       setCurrentRateStr(String(result.newRateMlPerHr))
@@ -73,12 +79,16 @@ export default function App() {
                 setAdjustment(null)
               }}
               onCalculate={handleCalculateInitial}
+              isExtremeWeight={isExtremeWeight}
             />
 
-            {/* Section 2 — Initial Dose Output */}
-            {initialDose && (
-              <InitialDoseOutput dose={initialDose} weightKg={parseFloat(weight)} />
-            )}
+            {/* Live region for screen readers */}
+            <div aria-live="polite" aria-atomic="true">
+              {/* Section 2 — Initial Dose Output */}
+              {initialDose && (
+                <InitialDoseOutput dose={initialDose} weightKg={weightKg} />
+              )}
+            </div>
 
             {/* Section 3 — aPTT Adjustment */}
             {initialDose && (
@@ -98,13 +108,15 @@ export default function App() {
             )}
 
             {/* Section 4 — Adjustment Output */}
-            {adjustment && initialDose && (
-              <AdjustmentOutput
-                result={adjustment}
-                weightKg={parseFloat(weight)}
-                prevRateIuPerHr={initialDose.infusion.iuPerHr}
-              />
-            )}
+            <div aria-live="polite" aria-atomic="true">
+              {adjustment && initialDose && (
+                <AdjustmentOutput
+                  result={adjustment}
+                  weightKg={weightKg}
+                  prevRateIuPerHr={prevRateIuPerHr}
+                />
+              )}
+            </div>
           </main>
 
           {/* Right — Guideline Panel (sticky on desktop, stacked on mobile) */}

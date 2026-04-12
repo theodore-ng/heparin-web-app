@@ -1,5 +1,5 @@
 import type { AdjustmentResult } from '../logic/heparin'
-import { useState } from 'react'
+import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
 
 interface AdjustmentOutputProps {
   result: AdjustmentResult
@@ -8,8 +8,6 @@ interface AdjustmentOutputProps {
 }
 
 export default function AdjustmentOutput({ result, weightKg, prevRateIuPerHr }: AdjustmentOutputProps) {
-  const [copied, setCopied] = useState(false)
-
   const lines: string[] = [
     `HEPARIN ADJUSTMENT — Weight: ${weightKg} kg | aPTT: ${result.aptt} sec`,
     `Previous rate: ${prevRateIuPerHr} IU/hr`,
@@ -32,19 +30,15 @@ export default function AdjustmentOutput({ result, weightKg, prevRateIuPerHr }: 
 
   const orderText = lines.join('\n')
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(orderText).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
+  const [copied, copy] = useCopyToClipboard()
 
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-slate-800">Adjustment Result</h2>
         <button
-          onClick={handleCopy}
+          type="button"
+          onClick={() => copy(orderText)}
           className="text-sm px-3 py-1.5 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
         >
           {copied ? '✓ Copied' : 'Copy Orders'}

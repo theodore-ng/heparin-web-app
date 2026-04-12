@@ -81,6 +81,7 @@ export default function APTTAdjustment({
       </div>
 
       <button
+        type="button"
         onClick={onAdjust}
         disabled={!isValid}
         className="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
