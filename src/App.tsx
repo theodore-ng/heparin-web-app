@@ -4,42 +4,62 @@ import InitialDoseOutput from './components/InitialDoseOutput'
 import APTTAdjustment from './components/APTTAdjustment'
 import AdjustmentOutput from './components/AdjustmentOutput'
 import GuidelinePanel from './components/GuidelinePanel'
+import ProtocolSelector from './components/ProtocolSelector'
+import InfoPanel from './components/InfoPanel'
 import {
   calcInitialDose,
   calcAPTTAdjustment,
   type InitialDose,
   type AdjustmentResult,
 } from './logic/heparin'
-
-const WEIGHT_WARN_THRESHOLD = 200
+import { getProtocol, DEFAULT_PROTOCOL_ID } from './logic/protocols'
 
 export default function App() {
+  const [selectedProtocolId, setSelectedProtocolId] = useState(DEFAULT_PROTOCOL_ID)
   const [weight, setWeight] = useState('')
   const [initialDose, setInitialDose] = useState<InitialDose | null>(null)
   const [aptt, setAptt] = useState('')
   const [adjustment, setAdjustment] = useState<AdjustmentResult | null>(null)
   const [currentRateStr, setCurrentRateStr] = useState('')
-  const [prevRateIuPerHr, setPrevRateIuPerHr] = useState(0)
 
+  const selectedProtocol = getProtocol(selectedProtocolId)
   const weightKg = parseFloat(weight)
-  const isExtremeWeight = !isNaN(weightKg) && weightKg > WEIGHT_WARN_THRESHOLD
+  const isExtremeWeight = !isNaN(weightKg) && weightKg > 200
+
+  const handleProtocolChange = (id: string) => {
+    setSelectedProtocolId(id)
+    setInitialDose(null)
+    setAdjustment(null)
+    setCurrentRateStr('')
+    setAptt('')
+  }
+
+  const handleWeightChange = (v: string) => {
+    setWeight(v)
+    setInitialDose(null)
+    setAdjustment(null)
+  }
 
   const handleCalculateInitial = () => {
-    if (isNaN(weightKg) || weightKg <= 0) return
-    const dose = calcInitialDose(weightKg)
+    const kg = parseFloat(weight)
+    if (isNaN(kg) || kg <= 0 || !selectedProtocol.calculable) return
+    const dose = calcInitialDose(kg, selectedProtocol)
     setInitialDose(dose)
     setAptt('')
     setAdjustment(null)
     setCurrentRateStr(String(dose.infusion.mLPerHr))
-    setPrevRateIuPerHr(dose.infusion.iuPerHr)
   }
 
   const handleAdjust = () => {
     const apttVal = parseFloat(aptt)
+    const kg = parseFloat(weight)
     const rateIuPerHr = parseFloat(currentRateStr) * 250
-    if (isNaN(apttVal) || isNaN(weightKg) || apttVal <= 0 || isNaN(rateIuPerHr) || initialDose === null) return
-    setPrevRateIuPerHr(rateIuPerHr)
-    const result = calcAPTTAdjustment(apttVal, weightKg, rateIuPerHr)
+    if (
+      isNaN(apttVal) || isNaN(kg) || apttVal <= 0 ||
+      isNaN(rateIuPerHr) || initialDose === null ||
+      !selectedProtocol.apttBands
+    ) return
+    const result = calcAPTTAdjustment(apttVal, kg, rateIuPerHr, selectedProtocol.apttBands)
     setAdjustment(result)
     if (!result.noChange) {
       setCurrentRateStr(String(result.newRateMlPerHr))
@@ -51,9 +71,9 @@ export default function App() {
       {/* Header */}
       <header className="bg-blue-700 text-white shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold">Heparin IV Dose Calculator</h1>
+          <h1 className="text-xl font-bold">Heparin IV Calc.</h1>
           <p className="text-blue-200 text-sm mt-0.5">
-            Weight-based · 250 IU/mL · aPTT-guided adjustment
+            Weight-based · CR Hospital · 12,500 IU/50 mL · aPTT-guided adjustment
           </p>
         </div>
       </header>
@@ -70,28 +90,40 @@ export default function App() {
               Institutional protocol takes precedence over this calculator.
             </div>
 
+            {/* Protocol Selector */}
+            <ProtocolSelector
+              selected={selectedProtocolId}
+              onChange={handleProtocolChange}
+            />
+
             {/* Section 1 — Patient Input */}
             <PatientInput
               weight={weight}
-              onChange={(v) => {
-                setWeight(v)
-                setInitialDose(null)
-                setAdjustment(null)
-              }}
+              onChange={handleWeightChange}
               onCalculate={handleCalculateInitial}
               isExtremeWeight={isExtremeWeight}
+              showButton={selectedProtocol.calculable}
             />
 
-            {/* Live region for screen readers */}
-            <div aria-live="polite" aria-atomic="true">
-              {/* Section 2 — Initial Dose Output */}
-              {initialDose && (
-                <InitialDoseOutput dose={initialDose} weightKg={weightKg} />
-              )}
-            </div>
+            {/* Non-calculable protocols (PCI / ACT-monitored) */}
+            {!selectedProtocol.calculable && (
+              <InfoPanel
+                protocol={selectedProtocol}
+                weightKg={isNaN(weightKg) ? null : weightKg}
+              />
+            )}
+
+            {/* Section 2 — Initial Dose Output */}
+            {selectedProtocol.calculable && initialDose && (
+              <InitialDoseOutput
+                dose={initialDose}
+                weightKg={weightKg}
+                protocol={selectedProtocol}
+              />
+            )}
 
             {/* Section 3 — aPTT Adjustment */}
-            {initialDose && (
+            {selectedProtocol.calculable && initialDose && (
               <APTTAdjustment
                 currentRateStr={currentRateStr}
                 onRateChange={(v) => {
@@ -104,29 +136,27 @@ export default function App() {
                   setAdjustment(null)
                 }}
                 onAdjust={handleAdjust}
+                protocol={selectedProtocol}
               />
             )}
 
             {/* Section 4 — Adjustment Output */}
-            <div aria-live="polite" aria-atomic="true">
-              {adjustment && initialDose && (
-                <AdjustmentOutput
-                  result={adjustment}
-                  weightKg={weightKg}
-                  prevRateIuPerHr={prevRateIuPerHr}
-                />
-              )}
-            </div>
+            {selectedProtocol.calculable && adjustment && initialDose && (
+              <AdjustmentOutput
+                result={adjustment}
+                weightKg={weightKg}
+                prevRateIuPerHr={initialDose.infusion.iuPerHr}
+              />
+            )}
           </main>
 
-          {/* Right — Guideline Panel (sticky on desktop, stacked on mobile) */}
+          {/* Right — Guideline Panel (sticky on desktop) */}
           <div className="mt-4 lg:mt-0 lg:sticky lg:top-6">
-            <GuidelinePanel />
+            <GuidelinePanel protocol={selectedProtocol} />
           </div>
 
         </div>
       </div>
-
     </div>
   )
 }

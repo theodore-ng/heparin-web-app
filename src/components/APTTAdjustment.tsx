@@ -1,9 +1,13 @@
+import type { Protocol } from '../logic/protocols'
+import { formatBandRange } from '../logic/protocols'
+
 interface APTTAdjustmentProps {
   currentRateStr: string
   onRateChange: (value: string) => void
   aptt: string
   onApttChange: (value: string) => void
   onAdjust: () => void
+  protocol: Protocol
 }
 
 export default function APTTAdjustment({
@@ -12,6 +16,7 @@ export default function APTTAdjustment({
   aptt,
   onApttChange,
   onAdjust,
+  protocol,
 }: APTTAdjustmentProps) {
   const rateValid = currentRateStr !== '' && !isNaN(parseFloat(currentRateStr)) && parseFloat(currentRateStr) >= 0
   const isValid = aptt !== '' && !isNaN(parseFloat(aptt)) && parseFloat(aptt) > 0 && rateValid
@@ -19,6 +24,8 @@ export default function APTTAdjustment({
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && isValid) onAdjust()
   }
+
+  const target = protocol.targetAPTT!
 
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
@@ -69,14 +76,26 @@ export default function APTTAdjustment({
         </div>
       </div>
 
+      {/* Dynamic aPTT target summary */}
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs text-slate-500">
-        <p className="font-semibold text-slate-600 mb-1">aPTT Target: 60–100 sec</p>
+        <p className="font-semibold text-slate-600 mb-1.5">
+          aPTT Target: {target.low}–{target.high} sec
+        </p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-          <span>&lt;40 sec → bolus + ↑ rate</span>
-          <span>40–59 sec → small bolus + ↑ rate</span>
-          <span>60–100 sec → no change</span>
-          <span>101–120 sec → ↓ rate</span>
-          <span>&gt;120 sec → hold 1 hr + ↓ rate</span>
+          {protocol.apttBands!.map((band, i) => {
+            const action = band.noChange
+              ? 'No change'
+              : band.holdOneHour
+                ? 'Hold 1 hr + ↓ rate'
+                : band.ratePerKg > 0
+                  ? `${band.bolusPerKg > 0 ? 'Bolus + ' : ''}↑ rate`
+                  : '↓ rate'
+            return (
+              <span key={i}>
+                {formatBandRange(band)} sec → {action}
+              </span>
+            )
+          })}
         </div>
       </div>
 

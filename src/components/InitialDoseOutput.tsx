@@ -1,19 +1,22 @@
 import type { InitialDose } from '../logic/heparin'
+import type { Protocol } from '../logic/protocols'
 import { useCopyToClipboard } from '../hooks/useCopyToClipboard'
 
 interface InitialDoseOutputProps {
   dose: InitialDose
   weightKg: number
+  protocol: Protocol
 }
 
-export default function InitialDoseOutput({ dose, weightKg }: InitialDoseOutputProps) {
+export default function InitialDoseOutput({ dose, weightKg, protocol }: InitialDoseOutputProps) {
   const orderText = [
-    `HEPARIN IV ORDER — Weight: ${weightKg} kg`,
+    `HEPARIN IV ORDER — ${protocol.shortName} | Weight: ${weightKg} kg`,
     `Concentration: 12,500 IU in 50 mL (250 IU/mL)`,
     ``,
-    `INITIAL BOLUS: ${dose.bolus.iu} IU (${dose.bolus.mL} mL) IV push`,
-    `INITIAL INFUSION: ${dose.infusion.iuPerHr} IU/hr (${dose.infusion.mLPerHr} mL/hr)`,
+    `INITIAL BOLUS: ${dose.bolus.iu.toLocaleString()} IU (${dose.bolus.mL} mL) IV push${dose.bolusCapped ? ` [capped at ${protocol.bolusMaxIu?.toLocaleString()} IU]` : ''}`,
+    `INITIAL INFUSION: ${dose.infusion.iuPerHr.toLocaleString()} IU/hr (${dose.infusion.mLPerHr} mL/hr)${dose.infusionCapped ? ` [capped at ${protocol.infusionMaxIuPerHr?.toLocaleString()} IU/hr]` : ''}`,
     ``,
+    `aPTT target: ${protocol.targetAPTT?.low}–${protocol.targetAPTT?.high} sec`,
     `Recheck aPTT in 6 hours.`,
     `VERIFY DOSE CLINICALLY BEFORE ADMINISTRATION.`,
   ].join('\n')
@@ -42,6 +45,11 @@ export default function InitialDoseOutput({ dose, weightKg }: InitialDoseOutputP
             {dose.bolus.iu.toLocaleString()} IU
           </p>
           <p className="text-sm text-blue-600 mt-0.5">{dose.bolus.mL} mL IV push</p>
+          {dose.bolusCapped && (
+            <p className="text-xs text-amber-600 font-medium mt-1">
+              Max cap: {protocol.bolusMaxIu?.toLocaleString()} IU
+            </p>
+          )}
         </div>
 
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
@@ -52,6 +60,11 @@ export default function InitialDoseOutput({ dose, weightKg }: InitialDoseOutputP
             {dose.infusion.iuPerHr.toLocaleString()} IU/hr
           </p>
           <p className="text-sm text-indigo-600 mt-0.5">{dose.infusion.mLPerHr} mL/hr</p>
+          {dose.infusionCapped && (
+            <p className="text-xs text-amber-600 font-medium mt-1">
+              Max cap: {protocol.infusionMaxIuPerHr?.toLocaleString()} IU/hr
+            </p>
+          )}
         </div>
       </div>
 

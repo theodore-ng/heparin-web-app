@@ -1,24 +1,7 @@
+import type { APTTBand, Protocol } from './protocols'
+
 /** Fixed concentration: 12,500 IU in 50 mL = 250 IU/mL */
 const CONCENTRATION_IU_PER_ML = 250
-
-/* ── Clinical Protocol Constants ───────────────────────────── */
-const BOLUS_FACTOR_IU_PER_KG = 80           // Initial bolus: 80 IU/kg
-const INFUSION_FACTOR_IU_PER_KG_HR = 18     // Initial infusion: 18 IU/kg/hr
-
-/** aPTT thresholds (seconds) */
-const APTT_CRITICAL_LOW = 40
-const APTT_LOW = 60
-const APTT_HIGH = 100
-const APTT_CRITICAL_HIGH = 120
-
-/** aPTT adjustment factors */
-const ADJ_BOLUS_HIGH = 80                   // IU/kg for aPTT < 40
-const ADJ_BOLUS_LOW = 40                    // IU/kg for aPTT 40–59
-const ADJ_RATE_INCREASE_HIGH = 4            // IU/kg/hr for aPTT < 40
-const ADJ_RATE_INCREASE_LOW = 2             // IU/kg/hr for aPTT 40–59
-const ADJ_RATE_DECREASE_LOW = 2             // IU/kg/hr for aPTT 101–120
-const ADJ_RATE_DECREASE_HIGH = 4            // IU/kg/hr for aPTT > 120
-/* ───────────────────────────────────────────────────────────── */
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10
@@ -37,6 +20,8 @@ export interface InitialInfusion {
 export interface InitialDose {
   bolus: BolusDose
   infusion: InitialInfusion
+  bolusCapped: boolean
+  infusionCapped: boolean
 }
 
 export interface AdjustmentResult {
@@ -48,55 +33,64 @@ export interface AdjustmentResult {
   noChange: boolean
 }
 
-export function calcBolus(weightKg: number): BolusDose {
-  const iu = weightKg * BOLUS_FACTOR_IU_PER_KG
-  return { iu, mL: round1(iu / CONCENTRATION_IU_PER_ML) }
-}
+/**
+ * Calculates initial bolus and infusion rate for a given protocol.
+ * Applies max caps where defined (e.g. STEMI protocols).
+ */
+export function calcInitialDose(weightKg: number, protocol: Protocol): InitialDose {
+  const rawBolusIu = weightKg * protocol.bolusPerKg!
+  const bolusIu = protocol.bolusMaxIu !== null
+    ? Math.min(rawBolusIu, protocol.bolusMaxIu)
+    : rawBolusIu
+  const bolusCapped = protocol.bolusMaxIu !== null && rawBolusIu > protocol.bolusMaxIu
 
-export function calcInitialInfusion(weightKg: number): InitialInfusion {
-  const iuPerHr = weightKg * INFUSION_FACTOR_IU_PER_KG_HR
-  return { iuPerHr, mLPerHr: round1(iuPerHr / CONCENTRATION_IU_PER_ML) }
-}
+  const rawInfusionIuPerHr = weightKg * protocol.infusionPerKgHr!
+  const infusionIuPerHr = protocol.infusionMaxIuPerHr !== null
+    ? Math.min(rawInfusionIuPerHr, protocol.infusionMaxIuPerHr)
+    : rawInfusionIuPerHr
+  const infusionCapped = protocol.infusionMaxIuPerHr !== null && rawInfusionIuPerHr > protocol.infusionMaxIuPerHr
 
-export function calcInitialDose(weightKg: number): InitialDose {
   return {
-    bolus: calcBolus(weightKg),
-    infusion: calcInitialInfusion(weightKg),
+    bolus: { iu: bolusIu, mL: round1(bolusIu / CONCENTRATION_IU_PER_ML) },
+    infusion: { iuPerHr: infusionIuPerHr, mLPerHr: round1(infusionIuPerHr / CONCENTRATION_IU_PER_ML) },
+    bolusCapped,
+    infusionCapped,
   }
 }
 
+/**
+ * Calculates the aPTT-guided dose adjustment using protocol-specific bands.
+ * Rate is clamped to a minimum of 0 IU/hr.
+ */
 export function calcAPTTAdjustment(
   aptt: number,
   weightKg: number,
   currentRateIuPerHr: number,
+  bands: APTTBand[],
 ): AdjustmentResult {
-  let bolusIu: number | null = null
-  let rateChangeDelta = 0
-  let holdOneHour = false
-  let noChange = false
+  const band = bands.find(b => aptt >= b.from && aptt < b.to)
+  if (!band) throw new Error(`No aPTT band matched for value ${aptt}`)
 
-  if (aptt < APTT_CRITICAL_LOW) {
-    bolusIu = weightKg * ADJ_BOLUS_HIGH
-    rateChangeDelta = weightKg * ADJ_RATE_INCREASE_HIGH
-  } else if (aptt < APTT_LOW) {
-    bolusIu = weightKg * ADJ_BOLUS_LOW
-    rateChangeDelta = weightKg * ADJ_RATE_INCREASE_LOW
-  } else if (aptt <= APTT_HIGH) {
-    noChange = true
-  } else if (aptt <= APTT_CRITICAL_HIGH) {
-    rateChangeDelta = -(weightKg * ADJ_RATE_DECREASE_LOW)
-  } else {
-    holdOneHour = true
-    rateChangeDelta = -(weightKg * ADJ_RATE_DECREASE_HIGH)
+  let bolusIu: number | null = null
+  if (band.bolusPerKg > 0) {
+    bolusIu = weightKg * band.bolusPerKg
+    if (band.bolusMaxIu !== null) bolusIu = Math.min(bolusIu, band.bolusMaxIu)
   }
 
+  const rateChangeDelta = weightKg * band.ratePerKg
   const newRateIuPerHr = Math.max(0, currentRateIuPerHr + rateChangeDelta)
   const newRateMlPerHr = round1(newRateIuPerHr / CONCENTRATION_IU_PER_ML)
 
-  const bolusSurcharge: BolusDose | null =
-    bolusIu !== null
-      ? { iu: bolusIu, mL: round1(bolusIu / CONCENTRATION_IU_PER_ML) }
-      : null
+  const bolusSurcharge: BolusDose | null = bolusIu !== null
+    ? { iu: bolusIu, mL: round1(bolusIu / CONCENTRATION_IU_PER_ML) }
+    : null
 
-  return { aptt, bolusSurcharge, holdOneHour, newRateIuPerHr, newRateMlPerHr, noChange }
+  return {
+    aptt,
+    bolusSurcharge,
+    holdOneHour: band.holdOneHour,
+    newRateIuPerHr,
+    newRateMlPerHr,
+    noChange: band.noChange,
+  }
 }

@@ -3,9 +3,16 @@ interface PatientInputProps {
   onChange: (value: string) => void
   onCalculate: () => void
   isExtremeWeight?: boolean
+  showButton?: boolean
 }
 
-export default function PatientInput({ weight, onChange, onCalculate, isExtremeWeight }: PatientInputProps) {
+export default function PatientInput({
+  weight,
+  onChange,
+  onCalculate,
+  isExtremeWeight,
+  showButton = true,
+}: PatientInputProps) {
   const isValid = weight !== '' && !isNaN(parseFloat(weight)) && parseFloat(weight) > 0
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -37,14 +44,16 @@ export default function PatientInput({ weight, onChange, onCalculate, isExtremeW
             </span>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onCalculate}
-          disabled={!isValid}
-          className="self-end sm:self-auto px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
-        >
-          Calculate Initial Dose
-        </button>
+        {showButton && (
+          <button
+            type="button"
+            onClick={onCalculate}
+            disabled={!isValid}
+            className="self-end sm:self-auto px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+          >
+            Calculate Initial Dose
+          </button>
+        )}
       </div>
       {isExtremeWeight && (
         <div className="mt-3 bg-amber-50 border border-amber-300 rounded-lg px-4 py-2.5 text-xs text-amber-800 font-medium">
@@ -54,4 +63,3 @@ export default function PatientInput({ weight, onChange, onCalculate, isExtremeW
     </section>
   )
 }
-
