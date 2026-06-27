@@ -106,9 +106,6 @@ export default function App() {
     setPrevRateIuPerHr(rateIuPerHr)
     const result = calcAPTTAdjustment(apttVal, weightKg, rateIuPerHr, selectedProtocol.apttBands, concentration)
     setAdjustment(result)
-    if (!result.noChange) {
-      setCurrentRateStr(String(result.newRateMlPerHr))
-    }
   }
 
   const showModeButtons = weightValid && selectedProtocol.calculable
