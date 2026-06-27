@@ -1,6 +1,6 @@
 # Heparin IV Dose Calculator
 
-A web-based clinical calculator for intravenous unfractionated heparin dosing using a standard weight-based, aPTT-guided protocol.
+A web-based clinical calculator for intravenous unfractionated heparin dosing. Supports multiple indications with weight-based, aPTT-guided dosing based on Dager 2018 (ASHP Anticoagulation Therapy).
 
 **Live app:** https://theodore-ng.github.io/heparin-web-app/
 
@@ -8,41 +8,36 @@ A web-based clinical calculator for intravenous unfractionated heparin dosing us
 
 ## Features
 
-- **Initial dosing** — calculates bolus (IU + mL) and infusion rate (IU/hr + mL/hr) from patient weight
-- **aPTT adjustment** — adjusts infusion rate based on latest aPTT result per standard protocol
-- **Editable current rate** — manually override the current infusion rate before calculating an adjustment
-- **Guideline panel** — always-visible reference sidebar with protocol overview, color-coded aPTT adjustment table, and 11 clinical references
-- **Copy button** — one-click copy of formatted order text
+- **Multi-indication support** — VTE (DVT/PE), Acute STEMI (full-dose and combination rt-PA), NSTEMI/UA, and PCI (with/without GP IIb/IIIa inhibitor)
+- **Flexible regimen** — enter any heparin bag (IU) and diluent volume (mL); concentration is computed automatically
+- **Two calculation modes** — "Calc Initial Dose" for new orders, "Adjust Dose" for patients already on a heparin infusion
+- **Initial dose** — calculates bolus (IU + mL) and infusion rate (IU/hr + mL/hr) from patient weight
+- **aPTT adjustment** — adjusts infusion rate based on latest aPTT per protocol-specific bands
+- **Guideline panel** — sticky reference sidebar with protocol overview, color-coded aPTT adjustment table, safety notes, and clinical references
+- **Copy button** — one-click copy of formatted order text including actual regimen concentration
 - **Mobile friendly** — responsive two-column layout (desktop) / single column (mobile)
 - **Offline capable** — fully client-side, no backend required
 
 ---
 
-## Clinical Protocol
+## Supported Protocols
 
-| Parameter | Value |
-|---|---|
-| Bag concentration | 12,500 IU in 50 mL (250 IU/mL) |
-| Initial bolus | 80 IU/kg IV |
-| Initial infusion | 18 IU/kg/hr |
-| Target aPTT | 60–100 seconds |
-| Recheck aPTT | 6 hours after start or dose change |
+| Indication | Bolus | Infusion | Target aPTT | Monitoring |
+|---|---|---|---|---|
+| VTE (DVT/PE) | 80 IU/kg | 18 IU/kg/hr | 60–100 sec | aPTT |
+| STEMI + full-dose rt-PA | 60 IU/kg (max 4,000) | 12 IU/kg/hr (max 1,000/hr) | 50–70 sec | aPTT |
+| STEMI + combination rt-PA | 60 IU/kg (max 3,000) | 7 IU/kg/hr (max 800/hr) | 50–70 sec | aPTT |
+| NSTEMI / Unstable Angina | 60 IU/kg (max 4,000) | 12 IU/kg/hr (max 1,000/hr) | 50–70 sec | aPTT |
+| PCI + GP IIb/IIIa inhibitor | 50–70 IU/kg | — | — | ACT |
+| PCI only | 70–100 IU/kg | — | — | ACT |
 
-### aPTT Adjustment Table
-
-| aPTT (sec) | Bolus | Rate change |
-|---|---|---|
-| < 40 | 80 IU/kg | +4 IU/kg/hr |
-| 40–59 | 40 IU/kg | +2 IU/kg/hr |
-| 60–100 | None | No change |
-| 101–120 | None | −2 IU/kg/hr |
-| > 120 | None | Hold 1 hr, −4 IU/kg/hr |
+*Source: Dager WE. Table 3-5. ASHP Anticoagulation Therapy, 2018.*
 
 ---
 
 ## Tech Stack
 
-- React 18 + TypeScript
+- React 19 + TypeScript 6
 - Vite 8
 - Tailwind CSS v4
 
