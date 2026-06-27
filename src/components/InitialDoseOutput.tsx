@@ -6,12 +6,15 @@ interface InitialDoseOutputProps {
   dose: InitialDose
   weightKg: number
   protocol: Protocol
+  regimenIu: number
+  regimenMl: number
+  concentration: number
 }
 
-export default function InitialDoseOutput({ dose, weightKg, protocol }: InitialDoseOutputProps) {
+export default function InitialDoseOutput({ dose, weightKg, protocol, regimenIu, regimenMl, concentration }: InitialDoseOutputProps) {
   const orderText = [
     `HEPARIN IV ORDER — ${protocol.shortName} | Weight: ${weightKg} kg`,
-    `Concentration: 12,500 IU in 50 mL (250 IU/mL)`,
+    `Concentration: ${regimenIu.toLocaleString()} IU in ${regimenMl} mL (${concentration.toFixed(1)} IU/mL)`,
     ``,
     `INITIAL BOLUS: ${dose.bolus.iu.toLocaleString()} IU (${dose.bolus.mL} mL) IV push${dose.bolusCapped ? ` [capped at ${protocol.bolusMaxIu?.toLocaleString()} IU]` : ''}`,
     `INITIAL INFUSION: ${dose.infusion.iuPerHr.toLocaleString()} IU/hr (${dose.infusion.mLPerHr} mL/hr)${dose.infusionCapped ? ` [capped at ${protocol.infusionMaxIuPerHr?.toLocaleString()} IU/hr]` : ''}`,

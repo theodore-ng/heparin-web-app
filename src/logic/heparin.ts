@@ -1,8 +1,5 @@
 import type { APTTBand, Protocol } from './protocols'
 
-/** Fixed concentration: 12,500 IU in 50 mL = 250 IU/mL */
-const CONCENTRATION_IU_PER_ML = 250
-
 function round1(n: number): number {
   return Math.round(n * 10) / 10
 }
@@ -37,7 +34,7 @@ export interface AdjustmentResult {
  * Calculates initial bolus and infusion rate for a given protocol.
  * Applies max caps where defined (e.g. STEMI protocols).
  */
-export function calcInitialDose(weightKg: number, protocol: Protocol): InitialDose {
+export function calcInitialDose(weightKg: number, protocol: Protocol, concentrationIuPerMl = 250): InitialDose {
   const rawBolusIu = weightKg * protocol.bolusPerKg!
   const bolusIu = protocol.bolusMaxIu !== null
     ? Math.min(rawBolusIu, protocol.bolusMaxIu)
@@ -51,8 +48,8 @@ export function calcInitialDose(weightKg: number, protocol: Protocol): InitialDo
   const infusionCapped = protocol.infusionMaxIuPerHr !== null && rawInfusionIuPerHr > protocol.infusionMaxIuPerHr
 
   return {
-    bolus: { iu: bolusIu, mL: round1(bolusIu / CONCENTRATION_IU_PER_ML) },
-    infusion: { iuPerHr: infusionIuPerHr, mLPerHr: round1(infusionIuPerHr / CONCENTRATION_IU_PER_ML) },
+    bolus: { iu: bolusIu, mL: round1(bolusIu / concentrationIuPerMl) },
+    infusion: { iuPerHr: infusionIuPerHr, mLPerHr: round1(infusionIuPerHr / concentrationIuPerMl) },
     bolusCapped,
     infusionCapped,
   }
@@ -67,6 +64,7 @@ export function calcAPTTAdjustment(
   weightKg: number,
   currentRateIuPerHr: number,
   bands: APTTBand[],
+  concentrationIuPerMl = 250,
 ): AdjustmentResult {
   const band = bands.find(b => aptt >= b.from && aptt < b.to)
   if (!band) throw new Error(`No aPTT band matched for value ${aptt}`)
@@ -79,10 +77,10 @@ export function calcAPTTAdjustment(
 
   const rateChangeDelta = weightKg * band.ratePerKg
   const newRateIuPerHr = Math.max(0, currentRateIuPerHr + rateChangeDelta)
-  const newRateMlPerHr = round1(newRateIuPerHr / CONCENTRATION_IU_PER_ML)
+  const newRateMlPerHr = round1(newRateIuPerHr / concentrationIuPerMl)
 
   const bolusSurcharge: BolusDose | null = bolusIu !== null
-    ? { iu: bolusIu, mL: round1(bolusIu / CONCENTRATION_IU_PER_ML) }
+    ? { iu: bolusIu, mL: round1(bolusIu / concentrationIuPerMl) }
     : null
 
   return {

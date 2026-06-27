@@ -58,14 +58,6 @@ export default function GuidelinePanel({ protocol }: GuidelinePanelProps) {
               </span>
             </li>
             <li className="flex justify-between border-t border-slate-100 pt-2 mt-2">
-              <span className="text-slate-500">Concentration</span>
-              <span className="font-medium">250 IU/mL</span>
-            </li>
-            <li className="flex justify-between">
-              <span className="text-slate-500">Bag</span>
-              <span className="font-medium">12,500 IU in 50 mL</span>
-            </li>
-            <li className="flex justify-between border-t border-slate-100 pt-2 mt-2">
               <span className="text-slate-500">Target aPTT</span>
               <span className="font-medium text-blue-700">
                 {protocol.targetAPTT!.low}–{protocol.targetAPTT!.high} sec
@@ -89,14 +81,6 @@ export default function GuidelinePanel({ protocol }: GuidelinePanelProps) {
             <li className="flex justify-between">
               <span className="text-slate-500">ACT Target</span>
               <span className="font-medium">{protocol.actTargetLabel}</span>
-            </li>
-            <li className="flex justify-between border-t border-slate-100 pt-2 mt-2">
-              <span className="text-slate-500">Concentration</span>
-              <span className="font-medium">250 IU/mL</span>
-            </li>
-            <li className="flex justify-between">
-              <span className="text-slate-500">Bag</span>
-              <span className="font-medium">12,500 IU in 50 mL</span>
             </li>
           </ul>
         )}
@@ -166,39 +150,6 @@ export default function GuidelinePanel({ protocol }: GuidelinePanelProps) {
           </ul>
         </div>
       )}
-
-      {/* How to Use */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-        <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3">
-          How to Use
-        </h2>
-        <ol className="space-y-2 text-sm text-slate-600 list-none">
-          {(isCalculable
-            ? [
-                'Select the clinical indication above.',
-                'Enter the patient\'s weight in kg.',
-                'Click "Calculate Initial Dose" to get the bolus and starting infusion rate.',
-                'Administer bolus and start infusion. Recheck aPTT in 6 hours.',
-                'Enter the aPTT result and click "Adjust Dose" to get the updated rate.',
-                'Repeat from step 5 each time a new aPTT is drawn.',
-              ]
-            : [
-                'Select the PCI indication above.',
-                'Enter the patient\'s weight in kg to see the bolus dose range.',
-                'Administer bolus IV push and verify ACT response per institutional protocol.',
-                'Additional bolus doses may be given to maintain target ACT.',
-                'aPTT monitoring is not used for this indication.',
-              ]
-          ).map((step, i) => (
-            <li key={i} className="flex gap-3">
-              <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">
-                {i + 1}
-              </span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
 
       {/* Safety Notes */}
       <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
